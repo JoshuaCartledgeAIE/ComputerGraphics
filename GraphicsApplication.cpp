@@ -35,14 +35,34 @@ bool GraphicsApplication::startup()
     // check OpenGL version
     printf("GL: %i.%i\n", GLVersion.major, GLVersion.minor);
 
-    // Initialize gizmos and camera
-    Gizmos::create(10000, 10000, 0, 0);
-    m_view = glm::lookAt(vec3(10, 10, 10), vec3(0), vec3(0, 1, 0));
-    m_projection = glm::perspective(glm::pi<float>() * 0.25f, 16 / 9.f, 0.1f, 1000.f);
-
-
+    // Initialize OpenGL background colour
     glClearColor(0.25f, 0.25f, 0.25f, 1);
     glEnable(GL_DEPTH_TEST);
+
+    // Initialize gizmos and camera
+    Gizmos::create(10000, 10000, 0, 0);
+    m_view = glm::lookAt(vec3(20, 20, 20), vec3(0), vec3(0, 1, 0));
+    m_projection = glm::perspective(glm::pi<float>() * 0.25f, 16 / 9.f, 0.1f, 1000.f);
+
+    // Load shader
+    m_shader.loadShader(aie::eShaderStage::VERTEX, "./shaders/simple.vert");
+    m_shader.loadShader(aie::eShaderStage::FRAGMENT, "./shaders/simple.frag");
+
+    if (m_shader.link() == false) {
+        printf("Shader Error: %s\n", m_shader.getLastError());
+        return false;
+    }
+
+    m_quadMesh.initialiseFromFile("./stanford/Bunny.obj");
+
+    // make the quad 10 units wide
+    m_quadTransform = {
+          0.5f,0,0,0,
+          0,0.5f,0,0,
+          0,0,0.5f,0,
+          0,0,0,1 };
+
+    
 
     return true;
 }
@@ -69,19 +89,21 @@ void GraphicsApplication::draw()
     vec4 white(1);
     vec4 black(0, 0, 0, 1);
 
-    // Add gridlines to the xy plane
-    for (int i = 0; i < 21; ++i)
-    {
-        Gizmos::addLine(vec3(-10 + i, 0, 10),
-            vec3(-10 + i, 0, -10),
-            i == 10 ? white : black);
+    int gridlineCount = 100;
 
-        Gizmos::addLine(vec3(10, 0, -10 + i),
-            vec3(-10, 0, -10 + i),
-            i == 10 ? white : black);
+    // Add gridlines to the xy plane
+    for (int i = 0; i < gridlineCount; i++)
+    {
+        Gizmos::addLine(vec3(-gridlineCount/2.0f + i, 0, gridlineCount / 2.0f),
+            vec3(-gridlineCount / 2.0f + i, 0, -gridlineCount / 2.0f),
+            i == gridlineCount / 2.0f ? white : black);
+
+        Gizmos::addLine(vec3(gridlineCount / 2.0f, 0, -gridlineCount / 2.0f + i),
+            vec3(-gridlineCount / 2.0f, 0, -gridlineCount / 2.0f + i),
+            i == gridlineCount / 2.0f ? white : black);
     }
 
-    static mat4 sunTransform = mat4(1);
+    /*static mat4 sunTransform = mat4(1);
     static mat4 planetTransform = glm::translate(mat4(1), vec3(0, 0, 6));
     static mat4 moonTransform = glm::translate(mat4(1), vec3(0, 0, 2));
 
@@ -96,9 +118,21 @@ void GraphicsApplication::draw()
 
     Gizmos::addSphere(vec3(0), 2, 10, 10, vec4(0.8f, 0.6f, 0.2f, 0.9f), &sunTransform);
     Gizmos::addSphere(vec3(0), 1, 10, 10, vec4(0.2f, 0.6f, 0.8f, 0.9f), &planetGlobalTransform);
-    Gizmos::addSphere(vec3(0), 0.2f, 10, 10, vec4(0.9f, 0.9f, 0.9f, 0.9f), &moonGlobalTransform);
+    Gizmos::addSphere(vec3(0), 0.2f, 10, 10, vec4(0.9f, 0.9f, 0.9f, 0.9f), &moonGlobalTransform);*/
 
     Gizmos::draw(m_projection * m_view);
+
+    // bind shader
+    m_shader.bind();
+
+    m_quadTransform = glm::rotate(m_quadTransform, m_deltaTime * 1.0f, vec3(0, 1, 0));
+
+    // bind transform
+    mat4 projectionViewModel = m_projection * m_view * m_quadTransform;
+    m_shader.bindUniform("ProjectionViewModel", projectionViewModel);
+
+    // draw quad
+    m_quadMesh.draw();
 
     glfwSwapBuffers(m_window);
     glfwPollEvents();
