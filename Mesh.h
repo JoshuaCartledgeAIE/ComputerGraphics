@@ -13,6 +13,10 @@ public:
 		glm::vec2 texCoord;
 	};
 
+	void initialiseQuad();
+
+	virtual void draw();
+
 protected:
 	
 

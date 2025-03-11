@@ -134,6 +134,7 @@
     <ClCompile Include="glad.c" />
     <ClCompile Include="GraphicsApplication.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
@@ -141,6 +142,7 @@
     <ClInclude Include="glad.h" />
     <ClInclude Include="GraphicsApplication.h" />
     <ClInclude Include="khrplatform.h" />
+    <ClInclude Include="Mesh.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
