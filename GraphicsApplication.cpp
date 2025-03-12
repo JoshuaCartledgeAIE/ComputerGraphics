@@ -11,8 +11,12 @@ using glm::mat4;
 
 using aie::Gizmos;
 
-bool GraphicsApplication::startup()
+GraphicsApplication* GraphicsApplication::s_instance;
+
+bool GraphicsApplication::Startup()
 {
+    Application::Startup();
+
     if (glfwInit() == false)
         return false;
 
@@ -41,8 +45,9 @@ bool GraphicsApplication::startup()
 
     // Initialize gizmos and camera
     Gizmos::create(10000, 10000, 0, 0);
-    m_view = glm::lookAt(vec3(20, 20, 20), vec3(0), vec3(0, 1, 0));
-    m_projection = glm::perspective(glm::pi<float>() * 0.25f, 16 / 9.f, 0.1f, 1000.f);
+    m_camera = Camera(225, -45, vec3(20, 20, 20));
+    glfwSetCursorPosCallback(m_window, &GraphicsApplication::SetMousePosition);
+
 
     // Load shader
     m_shader.loadShader(aie::eShaderStage::VERTEX, "./shaders/simple.vert");
@@ -53,10 +58,10 @@ bool GraphicsApplication::startup()
         return false;
     }
 
-    m_quadMesh.initialiseFromFile("./stanford/Bunny.obj");
+    m_renderObjectMesh.initialiseFromFile("./stanford/Bunny.obj");
 
     // make the quad 10 units wide
-    m_quadTransform = {
+    m_renderObjectTransform = {
           0.5f,0,0,0,
           0,0.5f,0,0,
           0,0,0.5f,0,
@@ -67,15 +72,18 @@ bool GraphicsApplication::startup()
     return true;
 }
 
-bool GraphicsApplication::update()
+bool GraphicsApplication::Update()
 {
-    m_deltaTime = glfwGetTime() - m_prevFrameTime;
-    m_prevFrameTime = glfwGetTime();
+    Application::Update();
+
+    m_camera.Update(m_deltaTime, m_window);
+
+    m_lastMousePosition = m_mousePosition;
 
     return glfwWindowShouldClose(m_window) == false && glfwGetKey(m_window, GLFW_KEY_ESCAPE) != GLFW_PRESS;
 }
 
-void GraphicsApplication::draw()
+void GraphicsApplication::Draw()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -86,10 +94,12 @@ void GraphicsApplication::draw()
     // Add 3-axis transform visual to the origin
     Gizmos::addTransform(glm::mat4(1));
 
+    glm::mat4 projectionViewMatrix = m_camera.GetProjectionMatrix(windowWidth, windowHeight) * m_camera.GetViewMatrix();
+
     vec4 white(1);
     vec4 black(0, 0, 0, 1);
 
-    int gridlineCount = 100;
+    int gridlineCount = 1000;
 
     // Add gridlines to the xy plane
     for (int i = 0; i < gridlineCount; i++)
@@ -120,25 +130,25 @@ void GraphicsApplication::draw()
     Gizmos::addSphere(vec3(0), 1, 10, 10, vec4(0.2f, 0.6f, 0.8f, 0.9f), &planetGlobalTransform);
     Gizmos::addSphere(vec3(0), 0.2f, 10, 10, vec4(0.9f, 0.9f, 0.9f, 0.9f), &moonGlobalTransform);*/
 
-    Gizmos::draw(m_projection * m_view);
+    Gizmos::draw(projectionViewMatrix);
 
     // bind shader
     m_shader.bind();
 
-    m_quadTransform = glm::rotate(m_quadTransform, m_deltaTime * 1.0f, vec3(0, 1, 0));
+    m_renderObjectTransform = glm::rotate(m_renderObjectTransform, m_deltaTime * 1.0f, vec3(0, 1, 0));
 
     // bind transform
-    mat4 projectionViewModel = m_projection * m_view * m_quadTransform;
+    mat4 projectionViewModel = projectionViewMatrix * m_renderObjectTransform;
     m_shader.bindUniform("ProjectionViewModel", projectionViewModel);
 
     // draw quad
-    m_quadMesh.draw();
+    m_renderObjectMesh.draw();
 
     glfwSwapBuffers(m_window);
     glfwPollEvents();
 }
 
-void GraphicsApplication::shutdown()
+void GraphicsApplication::Shutdown()
 {
     Gizmos::destroy();
     glfwTerminate();

@@ -5,16 +5,13 @@
 class Application
 {
 public:
-	virtual bool startup() = 0;
-	virtual bool update() = 0;
-	virtual void draw() = 0;
-	virtual void shutdown() = 0;
+
+	virtual bool Startup();
+	virtual bool Update();
+	virtual void Draw() = 0;
+	virtual void Shutdown() = 0;
 
 protected:
-	glm::mat4 m_view;
-	glm::mat4 m_projection;
-
-	GLFWwindow* m_window;
 
 	double m_prevFrameTime = 0.0f;
 	float m_deltaTime = 0.0f;

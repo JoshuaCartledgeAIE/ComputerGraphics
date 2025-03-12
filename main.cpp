@@ -6,13 +6,13 @@ int main()
 {
     GraphicsApplication* graphicsApp = new GraphicsApplication();
 
-    if (graphicsApp->startup() == true)
+    if (graphicsApp->Startup() == true)
     {
-        while (graphicsApp->update() == true) 
+        while (graphicsApp->Update() == true) 
         {
-            graphicsApp->draw();
+            graphicsApp->Draw();
         }
-        graphicsApp->shutdown();
+        graphicsApp->Shutdown();
     }
 
     delete graphicsApp;
