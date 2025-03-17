@@ -59,6 +59,7 @@ public:
 	~ShaderProgram();
 
 	bool loadShader(unsigned int stage, const char* filename);
+	bool loadAllShaderStages(const char* vertex_shader_filename, const char* fragment_shader_filename);
 	bool createShader(unsigned int stage, const char* string);
 	void attachShader(const std::shared_ptr<Shader>& shader);
 

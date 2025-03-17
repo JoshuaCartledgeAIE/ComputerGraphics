@@ -14,6 +14,8 @@ public:
 
 	void Update(float deltaTime, GLFWwindow* window);
 
+	glm::vec3 GetPosition() { return m_position; }
+
 private:
 	float m_theta;
 	float m_phi;

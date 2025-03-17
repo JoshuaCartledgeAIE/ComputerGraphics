@@ -4,6 +4,9 @@
 #include "Gizmos.h"
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
+#include <imgui.h>
+#include "imgui_impl_glfw_gl3.h"
+#include <GLFW/glfw3.h>
 
 using glm::vec3;
 using glm::vec4;
@@ -44,30 +47,36 @@ bool GraphicsApplication::Startup()
     glEnable(GL_DEPTH_TEST);
 
     // Initialize gizmos and camera
-    Gizmos::create(10000, 10000, 0, 0);
+    Gizmos::create(100000, 100000, 0, 0);
     m_camera = Camera(225, -45, vec3(20, 20, 20));
     glfwSetCursorPosCallback(m_window, &GraphicsApplication::SetMousePosition);
 
+    // Initialize ImGUI
+    ImGui_ImplGlfwGL3_Init(m_window, true);
 
-    // Load shader
-    m_shader.loadShader(aie::eShaderStage::VERTEX, "./shaders/simple.vert");
-    m_shader.loadShader(aie::eShaderStage::FRAGMENT, "./shaders/simple.frag");
 
-    if (m_shader.link() == false) {
-        printf("Shader Error: %s\n", m_shader.getLastError());
+    // Load shaders
+    //if (m_simpleShader.loadAllShaderStages("./shaders/simple.vert", "./shaders/simple.frag") == false)
+        //return false;
+    if (m_phongShader.loadAllShaderStages("./shaders/phong.vert", "./shaders/phong.frag") == false)
         return false;
-    }
 
+    // Load object's mesh and material
     m_renderObjectMesh.initialiseFromFile("./stanford/Bunny.obj");
+    m_renderObjectMesh.loadMaterial("./stanford/Bunny.mtl");
 
-    // make the quad 10 units wide
+    // set object's transform
     m_renderObjectTransform = {
           0.5f,0,0,0,
           0,0.5f,0,0,
           0,0,0.5f,0,
           0,0,0,1 };
 
-    
+    m_light.direction = vec3(0, -1, 0);
+    m_light.diffuseColour = { 1, 1, 1 };
+    m_light.specularColour = { 1,1,1 };
+    m_ambientLightColour = { 0.5f, 0.5f, 0.5f };
+
 
     return true;
 }
@@ -76,9 +85,21 @@ bool GraphicsApplication::Update()
 {
     Application::Update();
 
+    ImGui_ImplGlfwGL3_NewFrame();
+
+    ImGui::Begin("Light Settings");
+    ImGui::DragFloat3("Sunlight Direction", &m_light.direction[0], 0.01f, -1.0f,
+        1.0f);
+    ImGui::DragFloat3("Sunlight Colour", &m_light.diffuseColour[0], 0.01f, 0.0f,
+        2.0f);
+    ImGui::End();
+
     m_camera.Update(m_deltaTime, m_window);
 
     m_lastMousePosition = m_mousePosition;
+
+    // rotate light direction
+    //m_light.direction = glm::normalize(vec3(glm::cos(glfwGetTime() * 2), glm::sin(glfwGetTime() * 2), 0));
 
     return glfwWindowShouldClose(m_window) == false && glfwGetKey(m_window, GLFW_KEY_ESCAPE) != GLFW_PRESS;
 }
@@ -132,14 +153,27 @@ void GraphicsApplication::Draw()
 
     Gizmos::draw(projectionViewMatrix);
 
-    // bind shader
-    m_shader.bind();
+    ImGui::Render();
 
-    m_renderObjectTransform = glm::rotate(m_renderObjectTransform, m_deltaTime * 1.0f, vec3(0, 1, 0));
+    // bind shader
+    //m_simpleShader.bind();
+    m_phongShader.bind();
+
+    // rotate model around y axis
+    //m_renderObjectTransform = glm::rotate(m_renderObjectTransform, m_deltaTime * 1.0f, vec3(0, 1, 0));
 
     // bind transform
     mat4 projectionViewModel = projectionViewMatrix * m_renderObjectTransform;
-    m_shader.bindUniform("ProjectionViewModel", projectionViewModel);
+    //m_simpleShader.bindUniform("ProjectionViewModel", projectionViewModel);
+    m_phongShader.bindUniform("ProjectionViewModel", projectionViewModel);
+    m_phongShader.bindUniform("ModelMatrix", m_renderObjectTransform);
+    m_phongShader.bindUniform("LightDirection", m_light.direction);
+    m_phongShader.bindUniform("AmbientColour", m_ambientLightColour);
+    m_phongShader.bindUniform("LightColour", m_light.diffuseColour);
+    m_phongShader.bindUniform("CameraPosition", m_camera.GetPosition());
+    m_phongShader.bindUniform("SpecularColour",m_light.specularColour);
+
+    m_renderObjectMesh.applyMaterial(&m_phongShader);
 
     // draw quad
     m_renderObjectMesh.draw();
@@ -150,6 +184,7 @@ void GraphicsApplication::Draw()
 
 void GraphicsApplication::Shutdown()
 {
+    ImGui_ImplGlfwGL3_Shutdown();
     Gizmos::destroy();
     glfwTerminate();
 }

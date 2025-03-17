@@ -97,6 +97,27 @@ bool ShaderProgram::loadShader(unsigned int stage, const char* filename) {
 	return m_shaders[stage]->loadShader(stage, filename);
 }
 
+bool ShaderProgram::loadAllShaderStages(const char* vertex_shader_filename, const char* fragment_shader_filename)
+{
+	// Load shader
+	if (loadShader(aie::eShaderStage::VERTEX, vertex_shader_filename) == false)
+	{
+		printf("Shader '%s' failed to load\n", vertex_shader_filename);
+		return false;
+	}
+	if (loadShader(aie::eShaderStage::FRAGMENT, fragment_shader_filename) == false)
+	{
+		printf("Shader '%s' failed to load\n", fragment_shader_filename);
+		return false;
+	}
+
+	if (link() == false) {
+		printf("Shader Error: %s\n", getLastError());
+		return false;
+	}
+	return true;
+}
+
 bool ShaderProgram::createShader(unsigned int stage, const char* string) {
 	assert(stage > 0 && stage < eShaderStage::SHADER_STAGE_Count);
 	m_shaders[stage] = std::make_shared<Shader>();

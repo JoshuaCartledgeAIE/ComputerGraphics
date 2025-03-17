@@ -1,6 +1,8 @@
 #pragma once
 #include <glm/glm.hpp>
 
+namespace aie { class ShaderProgram; }
+
 class Mesh
 {
 public:
@@ -12,6 +14,9 @@ public:
 		glm::vec4 normal;
 		glm::vec2 texCoord;
 	};
+
+	void loadMaterial(const char* filename);
+	void applyMaterial(aie::ShaderProgram* shader);
 
 	void initialiseQuad();
 
@@ -28,5 +33,11 @@ protected:
 
 	unsigned int triCount;
 	unsigned int vao, vbo, ibo;
+
+	glm::vec3 Ka; // ambient colour of the surface
+	glm::vec3 Kd; // diffuse colour of the surface
+	glm::vec3 Ks; // specular colour of the surface
+	float specularPower; // tightness of specular highlights
+
 };
 
