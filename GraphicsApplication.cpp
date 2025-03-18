@@ -58,21 +58,26 @@ bool GraphicsApplication::Startup()
     // Load shaders
     //if (m_simpleShader.loadAllShaderStages("./shaders/simple.vert", "./shaders/simple.frag") == false)
         //return false;
-    if (m_phongShader.loadAllShaderStages("./shaders/phong.vert", "./shaders/phong.frag") == false)
+    if (m_phongShader.loadAllShaderStages("./shaders/phong_with_normal_map.vert", "./shaders/phong_with_normal_map.frag") == false)
         return false;
 
     // Load object's mesh and material
-    m_renderObjectMesh.initialiseFromFile("./stanford/Bunny.obj");
-    m_renderObjectMesh.loadMaterial("./stanford/Bunny.mtl");
+    m_renderObjectMesh.initialiseFromFile("./soulspear.obj");
+    m_renderObjectMesh.loadMaterial("./soulspear.mtl");
+
+
+    // load texture
+    //m_renderObjectTexture.load("textures/four_diffuse.tga");
+    
 
     // set object's transform
     m_renderObjectTransform = {
-          0.5f,0,0,0,
-          0,0.5f,0,0,
-          0,0,0.5f,0,
+          4.f,0,0,0,
+          0,4.f,0,0,
+          0,0,4.f,0,
           0,0,0,1 };
 
-    m_light.direction = vec3(0, -1, 0);
+    m_light.direction = vec3(-0.5f, -1, -0.5f);
     m_light.diffuseColour = { 1, 1, 1 };
     m_light.specularColour = { 1,1,1 };
     m_ambientLightColour = { 0.5f, 0.5f, 0.5f };
@@ -153,16 +158,17 @@ void GraphicsApplication::Draw()
 
     Gizmos::draw(projectionViewMatrix);
 
-    ImGui::Render();
+    
 
-    // bind shader
+    // bind shader and texture
     //m_simpleShader.bind();
     m_phongShader.bind();
+    
 
     // rotate model around y axis
     //m_renderObjectTransform = glm::rotate(m_renderObjectTransform, m_deltaTime * 1.0f, vec3(0, 1, 0));
 
-    // bind transform
+    // bind all the uniform variables of each shader
     mat4 projectionViewModel = projectionViewMatrix * m_renderObjectTransform;
     //m_simpleShader.bindUniform("ProjectionViewModel", projectionViewModel);
     m_phongShader.bindUniform("ProjectionViewModel", projectionViewModel);
@@ -172,11 +178,16 @@ void GraphicsApplication::Draw()
     m_phongShader.bindUniform("LightColour", m_light.diffuseColour);
     m_phongShader.bindUniform("CameraPosition", m_camera.GetPosition());
     m_phongShader.bindUniform("SpecularColour",m_light.specularColour);
+    
 
+    //m_renderObjectTexture.bind(0);
+    //m_phongShader.bindUniform("DiffuseTexture", 0);
     m_renderObjectMesh.applyMaterial(&m_phongShader);
 
-    // draw quad
+    // draw the mesh
     m_renderObjectMesh.draw();
+
+    ImGui::Render();
 
     glfwSwapBuffers(m_window);
     glfwPollEvents();

@@ -3,6 +3,7 @@
 #include "Shader.h"
 #include "Mesh.h"
 #include "Camera.h"
+#include "Texture.h"
 
 class GraphicsApplication : public Application
 {
@@ -35,6 +36,7 @@ protected:
 	aie::ShaderProgram      m_phongShader;
 	Mesh                    m_renderObjectMesh;
 	glm::mat4               m_renderObjectTransform;
+	aie::Texture			m_renderObjectTexture;
 
 	GLFWwindow* m_window;
 

@@ -54,6 +54,9 @@
     <ClCompile Include="dep\imgui\imgui_draw.cpp">
       <Filter>ImGUI</Filter>
     </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Gizmos.h">
@@ -89,6 +92,9 @@
     <ClInclude Include="dep\imgui\imgui_internal.h">
       <Filter>ImGUI</Filter>
     </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\shaders\simple.frag">
@@ -101,6 +107,12 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="bin\shaders\phong.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="bin\shaders\phong_with_normal_map.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="bin\shaders\phong_with_normal_map.vert">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

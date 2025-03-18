@@ -1,8 +1,11 @@
-// a simple flat colour shader
+// Phong fragment shader with diffuse texture support
 #version 410
 
 in vec3 vNormal;
 in vec4 vPosition;
+in vec2 vTexCoords;
+
+uniform sampler2D DiffuseTexture;
 
 uniform vec3 LightDirection;
 uniform vec3 LightColour;
@@ -33,11 +36,13 @@ void main() {
     vec3 V = normalize(CameraPosition - vPosition.xyz);
     float specularTerm = pow(clamp(dot(R, V), 0, 1), SpecularPower);
 
+    // Texture colour
+    vec3 textureColour = texture(DiffuseTexture, vTexCoords).rgb;
 
     // final lighting calculations
-    vec3 diffuse = LightColour * Kd * lambertTerm;
-    vec3 specular = SpecularColour * Ks * specularTerm;
+    vec3 diffuse = LightColour * Kd * lambertTerm * textureColour;
+    vec3 specular = SpecularColour * Ks * specularTerm * textureColour;
     vec3 ambient = AmbientColour * Ka;
 
-    FragColour = vec4(ambient + diffuse + specular, 1);
+    FragColour = vec4(ambient + diffuse + specular, 1) ;
 }
