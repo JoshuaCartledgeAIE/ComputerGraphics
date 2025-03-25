@@ -5,6 +5,11 @@
 #include "Camera.h"
 #include "Texture.h"
 
+
+class Instance;
+
+class Scene;
+
 class GraphicsApplication : public Application
 {
 public:
@@ -26,31 +31,21 @@ public:
 		s_instance->m_mousePosition = glm::vec2((float)x, (float)y);
 	}
 
-
 protected:
 
 	// overridden static instance
 	static GraphicsApplication* s_instance;
 
-	aie::ShaderProgram      m_simpleShader;
-	aie::ShaderProgram      m_phongShader;
-	Mesh                    m_renderObjectMesh;
-	glm::mat4               m_renderObjectTransform;
-	aie::Texture			m_renderObjectTexture;
 
 	GLFWwindow* m_window;
 
 	glm::vec2 m_mousePosition;
 	glm::vec2 m_lastMousePosition;
 
-	struct Light {
-		glm::vec3 direction;
-		glm::vec3 diffuseColour;
-		glm::vec3 specularColour;
-	};
+	
+	Scene* m_scene;
 
-	Light m_light;
-	glm::vec3 m_ambientLightColour;
+	bool m_renderDebugPointLights = false;
 
 	Camera m_camera;
 

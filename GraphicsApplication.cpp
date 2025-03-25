@@ -7,6 +7,9 @@
 #include <imgui.h>
 #include "imgui_impl_glfw_gl3.h"
 #include <GLFW/glfw3.h>
+#include "Instance.h"
+#include "Scene.h"
+#include <string>
 
 using glm::vec3;
 using glm::vec4;
@@ -15,6 +18,8 @@ using glm::mat4;
 using aie::Gizmos;
 
 GraphicsApplication* GraphicsApplication::s_instance;
+
+
 
 bool GraphicsApplication::Startup()
 {
@@ -48,40 +53,40 @@ bool GraphicsApplication::Startup()
 
     // Initialize gizmos and camera
     Gizmos::create(100000, 100000, 0, 0);
-    m_camera = Camera(225, -45, vec3(20, 20, 20));
+    m_camera = Camera(225, -30, vec3(20, 20, 20));
     glfwSetCursorPosCallback(m_window, &GraphicsApplication::SetMousePosition);
 
     // Initialize ImGUI
     ImGui_ImplGlfwGL3_Init(m_window, true);
 
-
     // Load shaders
-    //if (m_simpleShader.loadAllShaderStages("./shaders/simple.vert", "./shaders/simple.frag") == false)
-        //return false;
-    if (m_phongShader.loadAllShaderStages("./shaders/phong_with_normal_map.vert", "./shaders/phong_with_normal_map.frag") == false)
+    aie::ShaderProgram* phongShader = new aie::ShaderProgram;
+    if (phongShader->loadAllShaderStages("./shaders/phong_with_normal_map.vert", "./shaders/phong_with_normal_map.frag") == false)
         return false;
 
-    // Load object's mesh and material
-    m_renderObjectMesh.initialiseFromFile("./soulspear.obj");
-    m_renderObjectMesh.loadMaterial("./soulspear.mtl");
-
-
-    // load texture
-    //m_renderObjectTexture.load("textures/four_diffuse.tga");
+    // Load objects' meshes and materials
+    Mesh* soulspearMesh = new Mesh();
+    soulspearMesh->initialiseFromFile("./soulspear.obj");
+    soulspearMesh->loadMaterial("./soulspear.mtl");
     
 
-    // set object's transform
-    m_renderObjectTransform = {
-          4.f,0,0,0,
-          0,4.f,0,0,
-          0,0,4.f,0,
-          0,0,0,1 };
+    Light sunLight;
+    sunLight.direction = vec3(-0.5f, -1, -0.5f);
+    sunLight.setColour({1, 1, 1});
+    sunLight.intensity = 1;
+    vec3 ambientLightColour = { 0.5f, 0.5f, 0.5f };
 
-    m_light.direction = vec3(-0.5f, -1, -0.5f);
-    m_light.diffuseColour = { 1, 1, 1 };
-    m_light.specularColour = { 1,1,1 };
-    m_ambientLightColour = { 0.5f, 0.5f, 0.5f };
+    m_scene = new Scene(&m_camera, glm::vec2(windowWidth, windowHeight), sunLight, ambientLightColour);
 
+    // add 10 soulspears in a row, with varying rotations
+    for (int i = 0; i < 10; i++)
+        m_scene->AddInstance(new Instance(vec3(i*8 - 40, 0, 0), vec3(0, i*10 - 50, 0), vec3(3, 3, 3), soulspearMesh, phongShader));
+
+    // add red point light on left side
+    m_scene->getPointLights().push_back(Light(vec3(5,3,5), vec3(1,0,0), 100));
+
+    // add blue point light on right side
+    m_scene->getPointLights().push_back(Light(vec3(-5, 3, 5), vec3(0, 0, 1), 100));
 
     return true;
 }
@@ -93,10 +98,29 @@ bool GraphicsApplication::Update()
     ImGui_ImplGlfwGL3_NewFrame();
 
     ImGui::Begin("Light Settings");
-    ImGui::DragFloat3("Sunlight Direction", &m_light.direction[0], 0.01f, -1.0f,
+    ImGui::DragFloat3("Sunlight Direction", &m_scene->getSunLight()->direction[0], 0.01f, -1.0f,
         1.0f);
-    ImGui::DragFloat3("Sunlight Colour", &m_light.diffuseColour[0], 0.01f, 0.0f,
-        2.0f);
+    ImGui::DragFloat3("Sunlight Colour", &m_scene->getSunLight()->getBaseColour()[0][0], 0.01f, 0.0f,
+        1.0f);
+    ImGui::DragFloat("Sunlight Intensity", &m_scene->getSunLight()->intensity, 0.01f, 0.0f,
+        10.0f);
+
+    ImGui::Checkbox("Debug Show Point Lights", &m_renderDebugPointLights);
+    int i = 0;
+    for (auto&& light : m_scene->getPointLights()) 
+    {
+        i++;
+        ImGui::PushID(i);
+        ImGui::TextUnformatted(std::string("Point Light ").append(std::to_string(i).append(":")).c_str());
+        ImGui::DragFloat3("Position", &light.position[0], 0.2f, -100.0f,
+            100.0f);
+        ImGui::DragFloat3("Colour", &light.getBaseColour()[0][0], 0.01f, 0.0f,
+            1.0f);
+        ImGui::DragFloat("Intensity", &light.intensity, 0.05f, 0.0f,
+            1000.0f);
+        ImGui::PopID();
+    }
+    
     ImGui::End();
 
     m_camera.Update(m_deltaTime, m_window);
@@ -139,53 +163,27 @@ void GraphicsApplication::Draw()
             i == gridlineCount / 2.0f ? white : black);
     }
 
-    /*static mat4 sunTransform = mat4(1);
-    static mat4 planetTransform = glm::translate(mat4(1), vec3(0, 0, 6));
-    static mat4 moonTransform = glm::translate(mat4(1), vec3(0, 0, 2));
+    // render sun's direction at the origin
+    Gizmos::addLine(vec3(0,0,0), m_scene->getSunLight()->direction * 10.0f, vec4(m_scene->getSunLight()->getColour(), 1));
 
-    vec3 planetUpAxis = vec3(1, 1, 0);
+    // render point lights if debug rendering is turned on
+    if (m_renderDebugPointLights) 
+    {
+        for (int i = 0; i < m_scene->getNumLights(); i++)
+        {
+            Light light = m_scene->getPointLights()[i];
+            Gizmos::addSphere(light.position, sqrt(light.intensity), 10, 10, vec4(*light.getBaseColour(), 0.1f));
+        }
+    }
+    
 
-    sunTransform = glm::rotate(sunTransform, m_deltaTime * 0.5f, vec3(0, 1, 0));
-    planetTransform = glm::rotate(planetTransform, m_deltaTime * 1.0f, planetUpAxis);
-    moonTransform = glm::rotate(moonTransform, m_deltaTime * 5.0f, vec3(0, 1, 0));
 
-    mat4 planetGlobalTransform = sunTransform * planetTransform;
-    mat4 moonGlobalTransform = planetGlobalTransform * moonTransform;
+   
 
-    Gizmos::addSphere(vec3(0), 2, 10, 10, vec4(0.8f, 0.6f, 0.2f, 0.9f), &sunTransform);
-    Gizmos::addSphere(vec3(0), 1, 10, 10, vec4(0.2f, 0.6f, 0.8f, 0.9f), &planetGlobalTransform);
-    Gizmos::addSphere(vec3(0), 0.2f, 10, 10, vec4(0.9f, 0.9f, 0.9f, 0.9f), &moonGlobalTransform);*/
+    // Draw the instance
+    m_scene->draw();
 
     Gizmos::draw(projectionViewMatrix);
-
-    
-
-    // bind shader and texture
-    //m_simpleShader.bind();
-    m_phongShader.bind();
-    
-
-    // rotate model around y axis
-    //m_renderObjectTransform = glm::rotate(m_renderObjectTransform, m_deltaTime * 1.0f, vec3(0, 1, 0));
-
-    // bind all the uniform variables of each shader
-    mat4 projectionViewModel = projectionViewMatrix * m_renderObjectTransform;
-    //m_simpleShader.bindUniform("ProjectionViewModel", projectionViewModel);
-    m_phongShader.bindUniform("ProjectionViewModel", projectionViewModel);
-    m_phongShader.bindUniform("ModelMatrix", m_renderObjectTransform);
-    m_phongShader.bindUniform("LightDirection", m_light.direction);
-    m_phongShader.bindUniform("AmbientColour", m_ambientLightColour);
-    m_phongShader.bindUniform("LightColour", m_light.diffuseColour);
-    m_phongShader.bindUniform("CameraPosition", m_camera.GetPosition());
-    m_phongShader.bindUniform("SpecularColour",m_light.specularColour);
-    
-
-    //m_renderObjectTexture.bind(0);
-    //m_phongShader.bindUniform("DiffuseTexture", 0);
-    m_renderObjectMesh.applyMaterial(&m_phongShader);
-
-    // draw the mesh
-    m_renderObjectMesh.draw();
 
     ImGui::Render();
 
@@ -195,6 +193,7 @@ void GraphicsApplication::Draw()
 
 void GraphicsApplication::Shutdown()
 {
+    delete m_scene;
     ImGui_ImplGlfwGL3_Shutdown();
     Gizmos::destroy();
     glfwTerminate();

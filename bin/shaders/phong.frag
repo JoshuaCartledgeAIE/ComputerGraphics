@@ -9,7 +9,6 @@ uniform sampler2D DiffuseTexture;
 
 uniform vec3 LightDirection;
 uniform vec3 LightColour;
-uniform vec3 SpecularColour;
 uniform vec3 AmbientColour;
 
 uniform vec3 Ka; // ambient colour of the surface
@@ -41,7 +40,7 @@ void main() {
 
     // final lighting calculations
     vec3 diffuse = LightColour * Kd * lambertTerm * textureColour;
-    vec3 specular = SpecularColour * Ks * specularTerm * textureColour;
+    vec3 specular = LightColour * Ks * specularTerm * textureColour;
     vec3 ambient = AmbientColour * Ka;
 
     FragColour = vec4(ambient + diffuse + specular, 1) ;
